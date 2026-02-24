@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 import pandas as pd
+
+def _assert_list_eq(actual, expected):
+    """Compare lists, treating NaN/NA as equal to None."""
+    import math
+    assert len(actual) == len(expected), f"Length: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or (hasattr(pd, 'isna') and pd.isna(a)), f"[{i}]: expected None, got {a!r}"
+        else:
+            assert a == e, f"[{i}]: expected {e!r}, got {a!r}"
 import pytest
 
 from ducklake_pandas import read_ducklake, read_ducklake
@@ -46,8 +56,8 @@ class TestAddColumn:
         # schema check removed (pandas uses dtypes)
         result = result.sort_values(["a"]).reset_index(drop=True)
         assert result["a"].tolist() == [1, 2]
-        assert result["b"].tolist() == [None, "hello"]
-        assert result["c"].tolist() == [None, 3.14]
+        _assert_list_eq(result["b"].tolist(), [None, "hello"])
+        _assert_list_eq(result["c"].tolist(), [None, 3.14])
 
 
 class TestDropColumn:
@@ -128,7 +138,7 @@ class TestRenameColumn:
         assert result.shape == (2, 3)
         result = result.sort_values(["a"]).reset_index(drop=True)
         assert result["name"].tolist() == ["hello", "world"]
-        assert result["c"].tolist() == [None, 3.14]
+        _assert_list_eq(result["c"].tolist(), [None, 3.14])
 
     def test_rename_with_filter(self, ducklake_catalog):
         """Verify filter pushdown works after rename."""
@@ -320,7 +330,7 @@ class TestDefaultValues:
         assert result["a"].tolist() == [1, 2, 3]
         # Old Parquet files don't contain the new column, so old rows get NULL
         # (DuckLake does not backfill defaults into existing Parquet files)
-        assert result["b"].tolist() == [None, None, 100]
+        _assert_list_eq(result["b"].tolist(), [None, None, 100])
 
     def test_add_column_with_string_default(self, ducklake_catalog):
         cat = ducklake_catalog
@@ -341,7 +351,7 @@ class TestDefaultValues:
         assert result["a"].tolist() == [1, 2, 3]
         # Old Parquet files don't contain the new column, so old rows get NULL
         # (DuckLake does not backfill defaults into existing Parquet files)
-        assert result["b"].tolist() == [None, None, "world"]
+        _assert_list_eq(result["b"].tolist(), [None, None, "world"])
 
     def test_add_column_default_vs_null(self, ducklake_catalog):
         cat = ducklake_catalog
@@ -363,8 +373,8 @@ class TestDefaultValues:
         assert result["a"].tolist() == [1, 2]
         # Old row: both b and c are NULL (DuckLake does not backfill defaults
         # into existing Parquet files; missing_columns="insert" fills with NULL)
-        assert result["b"].tolist() == [None, "val"]
-        assert result["c"].tolist() == [None, 5]
+        _assert_list_eq(result["b"].tolist(), [None, "val"])
+        _assert_list_eq(result["c"].tolist(), [None, 5])
 
 
 class TestMixedAlter:
@@ -392,7 +402,7 @@ class TestMixedAlter:
         assert result["a"].tolist() == [1, 2, 3]
         assert result["c"].tolist() == ["first", "second", "third"]
         # Old rows (before b was re-added) should have NULL for b
-        assert result["b"].tolist() == [None, None, "new_b"]
+        _assert_list_eq(result["b"].tolist(), [None, None, "new_b"])
 
     def test_rename_and_drop(self, ducklake_catalog):
         """Rename one column and drop another, then insert and read."""

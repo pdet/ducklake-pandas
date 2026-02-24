@@ -5,6 +5,16 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
+def _assert_list_eq(actual, expected):
+    """Compare lists, treating NaN/NA as equal to None."""
+    import math
+    assert len(actual) == len(expected), f"Length: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or (hasattr(pd, 'isna') and pd.isna(a)), f"[{i}]: expected None, got {a!r}"
+        else:
+            assert a == e, f"[{i}]: expected {e!r}, got {a!r}"
+
 from ducklake_pandas import (
     read_ducklake,
     read_ducklake,
@@ -361,7 +371,7 @@ class TestUpdateEdgeCases:
         )
 
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
-        assert result["b"].tolist() == ["x", None, "z"]
+        _assert_list_eq(result["b"].tolist(), ["x", None, "z"])
 
     def test_update_then_delete(self, make_write_catalog):
         """Update followed by delete."""

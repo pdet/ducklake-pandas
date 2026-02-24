@@ -109,7 +109,7 @@ class PostgreSQLBackend:
         return isinstance(exc, psycopg2.ProgrammingError) and getattr(exc, "pgcode", None) == "42P01"
 
 
-def create_backend(path: str) -> SQLiteBackend | PostgreSQLBackend:
+def create_backend(path: str | os.PathLike) -> SQLiteBackend | PostgreSQLBackend:
     """
     Auto-detect the backend type from the connection string.
 

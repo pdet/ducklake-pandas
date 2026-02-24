@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 import pandas as pd
+
+def _assert_list_eq(actual, expected):
+    """Compare lists, treating NaN/NA as equal to None."""
+    import math
+    assert len(actual) == len(expected), f"Length: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or (hasattr(pd, 'isna') and pd.isna(a)), f"[{i}]: expected None, got {a!r}"
+        else:
+            assert a == e, f"[{i}]: expected {e!r}, got {a!r}"
 import pytest
 from pandas.testing import assert_frame_equal
 
@@ -126,7 +136,7 @@ class TestBasicScan:
         assert result.shape == (3, 2)
         # Verify NULL placement
         result = result.sort_values("a", na_position="last").reset_index(drop=True)
-        assert result["a"].tolist() == [1, None, None]
+        _assert_list_eq(result["a"].tolist(), [1, None, None])
 
     def test_large_insert(self, ducklake_catalog):
         cat = ducklake_catalog

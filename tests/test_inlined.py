@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 import pandas as pd
+
+def _assert_list_eq(actual, expected):
+    """Compare lists, treating NaN/NA as equal to None."""
+    import math
+    assert len(actual) == len(expected), f"Length: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or (hasattr(pd, 'isna') and pd.isna(a)), f"[{i}]: expected None, got {a!r}"
+        else:
+            assert a == e, f"[{i}]: expected {e!r}, got {a!r}"
 import pytest
 
 from ducklake_pandas import read_ducklake, read_ducklake
@@ -105,7 +115,7 @@ class TestInlinedDataTypes:
         result = read_ducklake(cat.metadata_path, "test")
         result = result.sort_values(["a"]).reset_index(drop=True)
         assert result.shape == (3, 2)
-        assert result["b"].tolist() == [True, False, None]
+        _assert_list_eq(result["b"].tolist(), [True, False, None])
 
     def test_inlined_decimal(self, ducklake_catalog_inline):
         cat = ducklake_catalog_inline
@@ -289,7 +299,7 @@ class TestInlinedSchemaEvolution:
         assert result["a"].tolist() == [1, 2, 3]
         assert result["b"].tolist() == ["first", "second", "third"]
         # Old rows should have c=NULL, new row should have c=42
-        assert result["c"].tolist() == [None, None, 42]
+        _assert_list_eq(result["c"].tolist(), [None, None, 42])
 
     def test_inlined_drop_column(self, ducklake_catalog_inline):
         cat = ducklake_catalog_inline

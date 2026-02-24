@@ -6,6 +6,16 @@ from datetime import datetime
 
 import pandas as pd
 
+def _assert_list_eq(actual, expected):
+    """Compare lists, treating NaN/NA as equal to None."""
+    import math
+    assert len(actual) == len(expected), f"Length: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or (hasattr(pd, 'isna') and pd.isna(a)), f"[{i}]: expected None, got {a!r}"
+        else:
+            assert a == e, f"[{i}]: expected {e!r}, got {a!r}"
+
 from ducklake_pandas import read_ducklake, read_ducklake
 
 
@@ -250,7 +260,7 @@ class TestPartitionWithSchemaEvolution:
         assert result["a"].tolist() == [1, 2, 3, 4]
         assert result["b"].tolist() == ["x", "y", "x", "y"]
         # Old rows have c=NULL, new rows have c values
-        assert result["c"].tolist() == [None, None, 100, 200]
+        _assert_list_eq(result["c"].tolist(), [None, None, 100, 200])
 
     def test_partition_drop_non_partition_column(self, ducklake_catalog):
         """Drop a non-partition column from a partitioned table."""
@@ -406,6 +416,5 @@ class TestNonIdentityPartition:
         cat.close()
 
         lf = read_ducklake(cat.metadata_path, "test")
-        result = lf.pipe(lambda df: df[df["ts"] < datetime(2021, 1, 1])
-        ).sort_values(["id"]).reset_index(drop=True)
+        result = lf[lf["ts"] < datetime(2021, 1, 1)].sort_values(["id"]).reset_index(drop=True)
         assert result["id"].tolist() == [1, 2]
