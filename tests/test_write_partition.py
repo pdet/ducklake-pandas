@@ -28,7 +28,7 @@ class TestSetPartitionedBy:
         """Set partitioning on a single column."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
 
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
@@ -59,7 +59,7 @@ class TestSetPartitionedBy:
         cat = make_write_catalog()
         create_ducklake_table(
             cat.metadata_path, "test",
-            {"a": "Int64", "b": "String", "c": "Int64"},
+            {"a": "Int64", "b": "varchar", "c": "Int64"},
         )
 
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b", "c"])
@@ -116,7 +116,7 @@ class TestPartitionedInsert:
         """Insert into a partitioned table creates per-partition files."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -131,7 +131,7 @@ class TestPartitionedInsert:
         """Verify Hive-style directory layout."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -152,7 +152,7 @@ class TestPartitionedInsert:
         cat = make_write_catalog()
         create_ducklake_table(
             cat.metadata_path, "test",
-            {"a": "Int64", "b": "String", "c": "Int64"},
+            {"a": "Int64", "b": "varchar", "c": "Int64"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b", "c"])
 
@@ -177,7 +177,7 @@ class TestPartitionedInsert:
         """Partition values are correctly registered in ducklake_file_partition_value."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -199,7 +199,7 @@ class TestPartitionedInsert:
         """Data files reference the correct partition_id."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -221,7 +221,7 @@ class TestPartitionedInsert:
         """Column statistics are computed per-partition file."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -249,7 +249,7 @@ class TestPartitionedInsert:
         """Multiple inserts into a partitioned table append correctly."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -294,7 +294,7 @@ class TestPartitionedFilter:
         """Filter on partition column returns correct subset."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -310,7 +310,7 @@ class TestPartitionedFilter:
         """Filter on non-partition column in partitioned table."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -334,7 +334,7 @@ class TestPartitionedOverwrite:
         """Overwrite partitioned table replaces all data."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -364,7 +364,7 @@ class TestPartitionedDuckDBInterop:
         """DuckDB reads data written by ducklake-pandas into partitioned table."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -381,7 +381,7 @@ class TestPartitionedDuckDBInterop:
         cat = make_write_catalog()
         create_ducklake_table(
             cat.metadata_path, "test",
-            {"a": "Int64", "b": "String", "c": "Int64"},
+            {"a": "Int64", "b": "varchar", "c": "Int64"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b", "c"])
 
@@ -488,7 +488,7 @@ class TestPartitionedRoundTrip:
         """Time travel works with partitioned writes."""
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -532,7 +532,7 @@ class TestPartitionedDelete:
 
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 
@@ -560,7 +560,7 @@ class TestPartitionedUpdate:
 
         cat = make_write_catalog()
         create_ducklake_table(
-            cat.metadata_path, "test", {"a": "Int64", "b": "String"},
+            cat.metadata_path, "test", {"a": "Int64", "b": "varchar"},
         )
         alter_ducklake_set_partitioned_by(cat.metadata_path, "test", ["b"])
 

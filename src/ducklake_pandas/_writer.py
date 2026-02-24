@@ -295,8 +295,14 @@ class DuckLakeCatalogWriter:
 
     def _serialize_value(self, value: Any, col_type: str) -> Any:
         """Convert a Python value to an appropriate storage format for the backend."""
-        if value is None or (isinstance(value, float) and np.isnan(value)):
+        if value is None:
             return None
+        # Handle pandas NA/NaT
+        try:
+            if pd.isna(value):
+                return None
+        except (ValueError, TypeError):
+            pass
         t = col_type.lower()
         if t == "boolean":
             return 1 if value else 0
@@ -306,6 +312,9 @@ class DuckLakeCatalogWriter:
             return str(value)
         if t.startswith("decimal"):
             return str(value)
+        # Convert numpy/pandas integers to Python int
+        if hasattr(value, 'item'):
+            return value.item()
         return value
 
     def _insert_inlined_rows(

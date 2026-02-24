@@ -183,6 +183,7 @@ def delete_ducklake(
     *,
     schema: str = "main",
     data_path: str | None = None,
+    data_inlining_row_limit: int = 0,
     author: str | None = None,
     commit_message: str | None = None,
 ) -> int:
@@ -204,6 +205,7 @@ def delete_ducklake(
     with DuckLakeCatalogWriter(
         metadata_path,
         data_path_override=data_path,
+        data_inlining_row_limit=data_inlining_row_limit,
         author=author,
         commit_message=commit_message,
     ) as writer:

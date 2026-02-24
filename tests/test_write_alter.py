@@ -7,6 +7,19 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
+
+def _assert_list_equal_with_nulls(actual, expected):
+    """Compare lists allowing NaN == None."""
+    import math
+    assert len(actual) == len(expected), f"Length mismatch: {len(actual)} vs {len(expected)}"
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if e is None:
+            assert a is None or (isinstance(a, float) and math.isnan(a)) or pd.isna(a), \
+                f"Index {i}: expected None, got {a!r}"
+        else:
+            assert a == e, f"Index {i}: expected {e!r}, got {a!r}"
+
+
 from ducklake_pandas import (
     alter_ducklake_add_column,
     alter_ducklake_drop_column,
@@ -36,7 +49,7 @@ class TestAddColumn:
         assert list(result.columns) == ["a", "b"]
         assert result["a"].tolist() == [1, 2, 3]
         # Existing rows should have NULL for the new column
-        assert result["b"].tolist() == [None, None, None]
+        _assert_list_equal_with_nulls(result["b"].tolist(), [None, None, None])
 
     def test_add_column_with_default(self, make_write_catalog):
         """Add a column with a default value (stored in metadata)."""
@@ -62,7 +75,7 @@ class TestAddColumn:
         df = pd.DataFrame({"a": [1, 2]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "varchar")
 
         # Insert new row with both columns
         new_row = pd.DataFrame({"a": [3], "b": ["hello"]})
@@ -70,7 +83,7 @@ class TestAddColumn:
 
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
         assert result["a"].tolist() == [1, 2, 3]
-        assert result["b"].tolist() == [None, None, "hello"]
+        _assert_list_equal_with_nulls(result["b"].tolist(), [None, None, "hello"])
 
     def test_add_column_metadata_correct(self, make_write_catalog):
         """Verify metadata: schema_version, column row, schema_versions."""
@@ -83,7 +96,7 @@ class TestAddColumn:
             "ORDER BY snapshot_id DESC LIMIT 1"
         )[0]
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "Int32")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "int32")
 
         # Schema version incremented
         sv_after = cat.query_one(
@@ -122,9 +135,9 @@ class TestAddColumn:
         df = pd.DataFrame({"a": [1, 2]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "varchar")
         alter_ducklake_add_column(cat.metadata_path, "test", "c", "Float64")
-        alter_ducklake_add_column(cat.metadata_path, "test", "d", "Boolean")
+        alter_ducklake_add_column(cat.metadata_path, "test", "d", "boolean")
 
         result = read_ducklake(cat.metadata_path, "test")
         assert list(result.columns) == ["a", "b", "c", "d"]
@@ -154,14 +167,14 @@ class TestAddColumn:
         df = pd.DataFrame({"a": [1, 2]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "varchar")
 
         new_row = pd.DataFrame({"a": [3], "b": ["new"]})
         write_ducklake(new_row, cat.metadata_path, "test", mode="append")
 
         pdf = cat.read_with_duckdb("test").sort_values(["a"]).reset_index(drop=True)
         assert pdf["a"].tolist() == [1, 2, 3]
-        assert pdf["b"].tolist() == [None, None, "new"]
+        _assert_list_equal_with_nulls(pdf["b"].tolist(), [None, None, "new"])
 
     def test_duckdb_add_column_pandas_reads(self, make_write_catalog):
         """DuckDB adds a column, pandas reads correctly."""
@@ -187,7 +200,7 @@ class TestAddColumn:
 
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
         assert result["a"].tolist() == [1, 2, 3]
-        assert result["b"].tolist() == [None, None, "hello"]
+        _assert_list_equal_with_nulls(result["b"].tolist(), [None, None, "hello"])
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +369,7 @@ class TestAddDropCombined:
         df = pd.DataFrame({"a": [1, 2]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "varchar")
         alter_ducklake_drop_column(cat.metadata_path, "test", "b")
 
         result = read_ducklake(cat.metadata_path, "test")
@@ -369,13 +382,13 @@ class TestAddDropCombined:
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
         alter_ducklake_drop_column(cat.metadata_path, "test", "b")
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "Int32")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "int32")
 
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
         assert list(result.columns) == ["a", "b"]
         assert result["a"].tolist() == [1, 2]
         # Old data files have string "b", new column is Int32 → NULLs
-        assert result["b"].tolist() == [None, None]
+        _assert_list_equal_with_nulls(result["b"].tolist(), [None, None])
 
     def test_add_drop_add_insert(self, make_write_catalog):
         """Add column, drop it, add another, then insert."""
@@ -383,7 +396,7 @@ class TestAddDropCombined:
         df = pd.DataFrame({"a": [1]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "temp", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "temp", "varchar")
         alter_ducklake_drop_column(cat.metadata_path, "test", "temp")
         alter_ducklake_add_column(cat.metadata_path, "test", "final", "Float64")
 
@@ -393,7 +406,7 @@ class TestAddDropCombined:
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
         assert list(result.columns) == ["a", "final"]
         assert result["a"].tolist() == [1, 2]
-        assert result["final"].tolist() == [None, 42.0]
+        _assert_list_equal_with_nulls(result["final"].tolist(), [None, 42.0])
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +425,7 @@ class TestAlterAndUpdate:
         df = pd.DataFrame({"a": [1, 2, 3]})
         write_ducklake(df, cat.metadata_path, "test", mode="error")
 
-        alter_ducklake_add_column(cat.metadata_path, "test", "b", "String")
+        alter_ducklake_add_column(cat.metadata_path, "test", "b", "varchar")
 
         new_data = pd.DataFrame({"a": [4, 5], "b": ["four", "five"]})
         write_ducklake(new_data, cat.metadata_path, "test", mode="append")
@@ -423,7 +436,7 @@ class TestAlterAndUpdate:
 
         result = read_ducklake(cat.metadata_path, "test").sort_values(["a"]).reset_index(drop=True)
         assert result["a"].tolist() == [1, 2, 3, 4, 5]
-        assert result["b"].tolist() == [None, None, None, "updated", "updated"]
+        _assert_list_equal_with_nulls(result["b"].tolist(), [None, None, None, "updated", "updated"])
 
     def test_drop_column_then_update(self, make_write_catalog):
         """Drop column, then update remaining columns."""
