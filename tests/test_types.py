@@ -121,8 +121,8 @@ class TestComplexTypes:
         result = read_ducklake(cat.metadata_path, "test")
         assert result.shape == (2, 1)
         values = result["a"].tolist()
-        assert values[0] == [1, 2, 3]
-        assert values[1] == [4, 5]
+        assert list(values[0]) == [1, 2, 3]
+        assert list(values[1]) == [4, 5]
 
     def test_struct_type(self, ducklake_catalog):
         cat = ducklake_catalog

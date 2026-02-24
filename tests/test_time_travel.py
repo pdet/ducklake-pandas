@@ -215,8 +215,8 @@ class TestTimeTravelWithComplexTypes:
         result_old = read_ducklake(cat.metadata_path, "test", snapshot_version=snap)
         assert result_old.shape[0] == 1
         assert result_old["id"].tolist() == [1]
-        assert result_old["s"].struct.field("x").tolist() == [10]
-        assert result_old["s"].struct.field("y").tolist() == ["a"]
+        assert [d["x"] for d in result_old["s"].tolist()] == [10]
+        assert [d["y"] for d in result_old["s"].tolist()] == ["a"]
 
         # Read at latest: all struct rows
         result_latest = read_ducklake(cat.metadata_path, "test")
@@ -237,7 +237,7 @@ class TestTimeTravelWithComplexTypes:
         result_old = read_ducklake(cat.metadata_path, "test", snapshot_version=snap)
         assert result_old.shape[0] == 1
         assert result_old["id"].tolist() == [1]
-        assert result_old["vals"].tolist() == [[10, 20, 30]]
+        assert [list(x) for x in result_old["vals"].tolist()] == [[10, 20, 30]]
 
         # Read at latest: all list rows
         result_latest = read_ducklake(cat.metadata_path, "test")

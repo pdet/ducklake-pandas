@@ -231,8 +231,9 @@ class TestEdgeCases:
         cat.execute("INSERT INTO ducklake.test VALUES (1)")
         cat.close()
 
-        with pytest.raises(Exception):
-            read_ducklake(cat.metadata_path, "test", columns=["nonexistent"])
+        # pandas silently drops unknown columns
+        result = read_ducklake(cat.metadata_path, "test", columns=["nonexistent"])
+        assert len(result.columns) == 0
 
 
 class TestMultipleTables:

@@ -64,7 +64,7 @@ class TestTableInfo:
         ]
                                                 
         assert len(result) == 1
-        row = result.row(0, named=True)
+        row = result.iloc[0].to_dict()
         assert row["table_name"] == "t1"
         assert row["file_count"] >= 1
         assert row["file_size_bytes"] > 0
@@ -97,7 +97,7 @@ class TestTableInfo:
         result = api.table_info()
 
         assert len(result) == 1
-        row = result.row(0, named=True)
+        row = result.iloc[0].to_dict()
         assert row["table_name"] == "t1"
         assert row["file_count"] >= 1
         assert row["file_size_bytes"] > 0
@@ -113,7 +113,7 @@ class TestTableInfo:
         result = api.table_info()
 
         assert len(result) == 1
-        row = result.row(0, named=True)
+        row = result.iloc[0].to_dict()
         assert row["table_name"] == "t1"
         assert row["file_count"] == 0
         assert row["file_size_bytes"] == 0
@@ -302,7 +302,7 @@ class TestOptions:
         assert list(result.columns) == ["catalog_type", "data_path"]
         assert len(result) == 1
 
-        row = result.row(0, named=True)
+        row = result.iloc[0].to_dict()
         assert row["catalog_type"] in ("sqlite", "postgresql")
         assert row["data_path"] is not None and len(row["data_path"]) > 0
 

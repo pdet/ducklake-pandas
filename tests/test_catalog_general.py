@@ -252,6 +252,6 @@ class TestEdgeCaseReads:
         assert b_values[0] == ""
         assert b_values[0] is not None
         # Row with a=2 has NULL
-        assert b_values[1] is None
+        assert b_values[1] is None or pd.isna(b_values[1])
         # Row with a=3 has a real string
         assert b_values[2] == "notempty"

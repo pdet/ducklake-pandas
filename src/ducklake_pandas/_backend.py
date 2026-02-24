@@ -117,6 +117,8 @@ def create_backend(path: str | os.PathLike) -> SQLiteBackend | PostgreSQLBackend
     ``postgres://``, or contains ``host=`` or ``dbname=`` (libpq key-value
     format).  Everything else is treated as a SQLite file path.
     """
+    path = str(path)
+    path = str(path)
     lower = path.strip().lower()
     if (
         lower.startswith("postgresql://")

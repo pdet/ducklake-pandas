@@ -369,7 +369,7 @@ class TestNullFiltering:
         )
         # 25 even values in range(0, 50) produce NULLs
         assert result.shape[0] == 25
-        assert all(b is None for b in result["b"].tolist())
+        assert result["b"].isnull().all()
         # Verify these are from batch 2 (ids 50, 52, 54, ...)
         assert sorted(result["id"].tolist()) == list(range(50, 100, 2))
 
@@ -418,7 +418,7 @@ class TestNullFiltering:
 
         result = (
             read_ducklake(cat.metadata_path, "test")
-            .pipe(lambda df: df[df["b"].isnull() | (lambda df: df["b"] > 50)])
+            .pipe(lambda df: df[df["b"].isnull() | (df["b"] > 50)])
             
         )
         # From batch 1: b values > 50 means i*10 > 50, so i >= 6 (i.e. 44 rows: 6..49)
