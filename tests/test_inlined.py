@@ -130,7 +130,7 @@ class TestInlinedDataTypes:
         result = result.sort_values(["a"]).reset_index(drop=True)
         assert result.shape == (3, 2)
         # Decimal values: check they are numerically correct
-        d_vals = result["d"].cast("Float64").tolist()
+        d_vals = result["d"].astype("float64").tolist()
         assert d_vals[0] == pytest.approx(123.45)
         assert d_vals[1] == pytest.approx(678.90)
         assert d_vals[2] == pytest.approx(0.01)

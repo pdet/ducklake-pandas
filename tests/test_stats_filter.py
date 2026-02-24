@@ -418,7 +418,7 @@ class TestNullFiltering:
 
         result = (
             read_ducklake(cat.metadata_path, "test")
-            .pipe(lambda df: df[df["b"].isnull() | (df["b"] > 50)])
+            .pipe(lambda df: df[df["b"].isnull() | (df["b"] > 50).fillna(False)])
             
         )
         # From batch 1: b values > 50 means i*10 > 50, so i >= 6 (i.e. 44 rows: 6..49)
@@ -427,8 +427,8 @@ class TestNullFiltering:
         #   so b in {1,3,5,...,49} -- none > 50 from batch 2's non-null values
         # Total: 44 from batch 1 (b > 50) + 25 nulls from batch 2 = 69
         values = result["b"].tolist()
-        null_count = sum(1 for v in values if v is None)
-        non_null_values = [v for v in values if v is not None]
+        null_count = sum(1 for v in values if v is None or pd.isna(v))
+        non_null_values = [v for v in values if not pd.isna(v)]
         assert null_count == 25
         assert all(v > 50 for v in non_null_values)
         assert result.shape[0] == 25 + 44

@@ -36,7 +36,8 @@ class TestAddColumn:
         # schema check removed (pandas uses dtypes)
         # Old rows should have NULL for the new column
         result = result.sort_values(["a"]).reset_index(drop=True)
-        assert result.pipe(lambda df: df[df["a"] <= 2])["b"].tolist() == [None, None]
+        old_b = result.pipe(lambda df: df[df["a"] <= 2])["b"].tolist()
+        assert all(pd.isna(v) or v is None for v in old_b)
         # New row should have the value
         assert result.pipe(lambda df: df[df["a"] == 3])["b"].tolist() == ["hello"]
 
