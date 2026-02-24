@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ducklake-pandas"
+version = "0.1.1"
+description = "Pandas integration for DuckLake catalogs"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "Pedro Holanda", email = "pedroholanda@gmail.com" },
+]
+keywords = ["ducklake", "pandas", "data-lake", "parquet", "iceberg"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pdet/ducklake-pandas"
+Repository = "https://github.com/pdet/ducklake-pandas"
+Issues = "https://github.com/pdet/ducklake-pandas/issues"
+
+[project.optional-dependencies]
+postgres = ["psycopg2-binary>=2.9"]
+dev = [
+    "pytest>=7.0",
+    "pytest-xdist",
+    "duckdb>=1.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ducklake_pandas"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "postgres: PostgreSQL integration tests (require DUCKLAKE_PG_DSN env var)",
+]
