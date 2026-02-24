@@ -406,7 +406,6 @@ class TestNonIdentityPartition:
         cat.close()
 
         lf = read_ducklake(cat.metadata_path, "test")
-        result = lf.filter(
-            lambda df: df["ts"] < datetime(2021, 1, 1)
+        result = lf.pipe(lambda df: df[df["ts"] < datetime(2021, 1, 1])
         ).sort_values(["id"]).reset_index(drop=True)
         assert result["id"].tolist() == [1, 2]

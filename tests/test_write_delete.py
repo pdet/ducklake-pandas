@@ -137,7 +137,7 @@ class TestDeleteMultiFile:
         write_ducklake(df2, cat.metadata_path, "test", mode="append")
 
         # Delete even numbers from both files
-        deleted = delete_ducklake(cat.metadata_path, "test", pd.col("a") % 2 == 0)
+        deleted = delete_ducklake(cat.metadata_path, "test", lambda df: df["a"] % 2 == 0)
         assert deleted == 5
 
         result = read_ducklake(cat.metadata_path, "test")
@@ -204,7 +204,7 @@ class TestDeleteThenAppend:
         write_ducklake(df2, cat.metadata_path, "test", mode="append")
 
         # Delete from both files
-        deleted = delete_ducklake(cat.metadata_path, "test", pd.col("a") % 2 == 0)
+        deleted = delete_ducklake(cat.metadata_path, "test", lambda df: df["a"] % 2 == 0)
         assert deleted == 3  # 2, 4, 6
 
         result = read_ducklake(cat.metadata_path, "test")
@@ -307,7 +307,7 @@ class TestDeleteDuckDBInterop:
         write_ducklake(df1, cat.metadata_path, "test", mode="append")
         write_ducklake(df2, cat.metadata_path, "test", mode="append")
 
-        delete_ducklake(cat.metadata_path, "test", pd.col("a") % 2 == 0)
+        delete_ducklake(cat.metadata_path, "test", lambda df: df["a"] % 2 == 0)
 
         pdf = cat.read_with_duckdb("test")
         assert sorted(pdf["a"].tolist()) == [1, 3, 5]
@@ -464,7 +464,7 @@ class TestDeleteMetadata:
         write_ducklake(df2, cat.metadata_path, "test", mode="append")
 
         # Delete even numbers from both files
-        delete_ducklake(cat.metadata_path, "test", pd.col("a") % 2 == 0)
+        delete_ducklake(cat.metadata_path, "test", lambda df: df["a"] % 2 == 0)
 
         del_rows = cat.query_all(
             "SELECT delete_file_id, data_file_id, delete_count "

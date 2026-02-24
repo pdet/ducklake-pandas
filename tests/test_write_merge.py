@@ -543,7 +543,7 @@ class TestMergeEdgeCases:
         source = pd.DataFrame({"id": [2, 3], "val": [200, 300]})
         updated, inserted = merge_ducklake(
             cat.metadata_path, "test", source, "id",
-            when_matched_update={"val": pd.col("val") + 1000},
+            when_matched_update={"val": lambda df: df["val"] + 1000},
             when_not_matched_insert=False,
         )
         assert updated == 2

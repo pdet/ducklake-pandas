@@ -72,7 +72,7 @@ class TestUpdateBasic:
 
         updated = update_ducklake(
             cat.metadata_path, "test",
-            {"c": pd.col("c") + 100.0, "b": "UPDATED"},
+            {"c": lambda df: df["c"] + 100.0, "b": "UPDATED"},
             lambda df: df["a"] >= 3,
         )
         assert updated == 3
@@ -133,7 +133,7 @@ class TestUpdateMultiFile:
 
         # Update even numbers from both files
         updated = update_ducklake(
-            cat.metadata_path, "test", {"b": "EVEN"}, pd.col("a") % 2 == 0
+            cat.metadata_path, "test", {"b": "EVEN"}, lambda df: df["a"] % 2 == 0
         )
         assert updated == 3
 
@@ -253,7 +253,7 @@ class TestUpdateDuckDBInterop:
 
         update_ducklake(
             cat.metadata_path, "test",
-            {"val": pd.col("val") * 2},
+            {"val": lambda df: df["val"] * 2},
             lambda df: df["a"] >= 2,
         )
 

@@ -1720,7 +1720,7 @@ class DuckLakeCatalogWriter:
 
     def delete_data(
         self,
-        predicate: Predicate,
+        predicate: Predicate | bool,
         table_name: str,
         *,
         schema_name: str = "main",
@@ -1728,10 +1728,12 @@ class DuckLakeCatalogWriter:
         """
         Delete rows matching a predicate from a table.
 
-        The predicate is a callable ``(DataFrame) -> Series[bool]``.
-        Rows where the result is True will be deleted.
+        The predicate is a callable ``(DataFrame) -> Series[bool]``,
+        or ``True`` to delete all rows.
         Returns the number of deleted rows.
         """
+        if predicate is True:
+            predicate = lambda df: pd.Series([True] * len(df), index=df.index)
         con = self._connect()
         snap_id, schema_ver, next_cat_id, next_file_id = self._get_latest_snapshot()
 

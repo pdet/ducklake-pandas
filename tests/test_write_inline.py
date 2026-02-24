@@ -75,9 +75,8 @@ class TestInlinedInsert:
             mode="error", data_inlining_row_limit=INLINE_LIMIT,
         )
 
-        result = read_ducklake(cat.metadata_path, "test").filter(
-            lambda df: df["x"] > 15
-        )
+        result = read_ducklake(cat.metadata_path, "test")
+        result = result[result["x"] > 15]
         result = result.sort_values(["x"]).reset_index(drop=True)
         assert result["x"].tolist() == [20, 30]
         assert result["y"].tolist() == [2.2, 3.3]

@@ -177,9 +177,9 @@ def overwrite_ducklake(
 
 
 def delete_ducklake(
-    predicate: Predicate,
     metadata_path: str,
     table: str,
+    predicate: Predicate,
     *,
     schema: str = "main",
     data_path: str | None = None,
@@ -211,10 +211,10 @@ def delete_ducklake(
 
 
 def update_ducklake(
-    updates: dict[str, Any],
-    predicate: Predicate,
     metadata_path: str,
     table: str,
+    updates: dict[str, Any],
+    predicate: Predicate,
     *,
     schema: str = "main",
     data_path: str | None = None,
@@ -257,9 +257,9 @@ def update_ducklake(
 
 
 def merge_ducklake(
-    source_df: pd.DataFrame,
     metadata_path: str,
     table: str,
+    source_df: pd.DataFrame,
     on: str | list[str],
     *,
     when_matched_update: dict[str, Any] | bool | None = None,

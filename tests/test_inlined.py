@@ -248,7 +248,7 @@ class TestInlinedMixedWithParquet:
         inlined_rows = result.pipe(lambda df: df[df["b"] == "inlined"]).sort_values(["a"]).reset_index(drop=True)
         assert inlined_rows["a"].tolist() == [1, 2]
         # Verify Parquet rows are present
-        parquet_rows = result.filter(pd.col("b").str.starts_with("val"))
+        parquet_rows = result.pipe(lambda df: df[df["b"].str.startswith("val")])
         assert parquet_rows.shape[0] == 5000
 
     def test_inlined_plus_flush(self, ducklake_catalog_inline):
