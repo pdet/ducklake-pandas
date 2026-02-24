@@ -570,9 +570,9 @@ def alter_ducklake_set_partitioned_by(
 
 
 def create_table_as_ducklake(
+    df: pd.DataFrame,
     metadata_path: str,
     table: str,
-    df: pd.DataFrame,
     *,
     schema: str = "main",
     data_path: str | None = None,

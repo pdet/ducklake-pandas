@@ -1887,7 +1887,7 @@ class DuckLakeCatalogWriter:
     def update_data(
         self,
         updates: dict[str, Any],
-        predicate: Predicate,
+        predicate: Predicate | bool,
         table_name: str,
         *,
         schema_name: str = "main",
@@ -1902,10 +1902,13 @@ class DuckLakeCatalogWriter:
             literals or ``Callable[[pd.DataFrame], pd.Series]`` for
             computed updates.
         predicate
-            Callable ``(DataFrame) -> Series[bool]``.
+            Callable ``(DataFrame) -> Series[bool]``, or ``True`` to
+            update all rows.
 
         Returns the number of rows updated.
         """
+        if predicate is True:
+            predicate = lambda df: pd.Series([True] * len(df), index=df.index)
         con = self._connect()
         snap_id, schema_ver, next_cat_id, next_file_id = self._get_latest_snapshot()
 
