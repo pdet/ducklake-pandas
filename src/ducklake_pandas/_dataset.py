@@ -129,6 +129,125 @@ def _get_rename_map(
     return rename_map
 
 
+def _get_struct_field_info(
+    all_columns: list[ColumnInfo],
+    history: list[ColumnHistoryEntry],
+) -> dict[str, tuple[list[str], dict[str, str]]]:
+    """Get struct field normalization info for each struct column.
+
+    Returns {col_name: (expected_field_names, old_name_to_current_name)} for
+    struct columns that need normalization.
+    """
+    struct_info: dict[str, tuple[list[str], dict[str, str]]] = {}
+
+    for col in all_columns:
+        if col.parent_column is not None:
+            continue
+        if col.column_type.lower() != "struct":
+            continue
+
+        # Get current child fields for this struct
+        children = sorted(
+            [c for c in all_columns if c.parent_column == col.column_id],
+            key=lambda c: c.column_order,
+        )
+        expected_names = [c.column_name for c in children]
+
+        # Build old_name -> current_name mapping using snapshot boundaries.
+        # DuckLake creates new column IDs for renamed struct fields, so we
+        # match by: field ended at snapshot S + field started at snapshot S = rename.
+        old_to_current: dict[str, str] = {}
+        current_name_set = set(expected_names)
+        child_history = [e for e in history if e.parent_column == col.column_id]
+
+        # Group ended fields (not in current schema) by their end_snapshot
+        ended_by_snap: dict[int, list[ColumnHistoryEntry]] = {}
+        for entry in child_history:
+            if entry.column_name not in current_name_set and entry.end_snapshot is not None:
+                ended_by_snap.setdefault(entry.end_snapshot, []).append(entry)
+
+        # Group new fields (in current schema, no prior history) by begin_snapshot
+        current_ids = {c.column_id for c in children}
+        started_by_snap: dict[int, list[ColumnHistoryEntry]] = {}
+        for entry in child_history:
+            if entry.column_id in current_ids and entry.end_snapshot is None:
+                has_prior = any(
+                    e.column_id == entry.column_id and e is not entry
+                    for e in child_history
+                )
+                if not has_prior:
+                    started_by_snap.setdefault(entry.begin_snapshot, []).append(entry)
+
+        # Match ended + started at the same snapshot
+        for snap, ended_list in ended_by_snap.items():
+            started_list = started_by_snap.get(snap, [])
+            for i, ended in enumerate(ended_list):
+                if i < len(started_list):
+                    old_to_current[ended.column_name] = started_list[i].column_name
+
+        struct_info[col.column_name] = (expected_names, old_to_current)
+
+    return struct_info
+
+
+def _normalize_struct_value(
+    val: Any,
+    expected_names: list[str],
+    old_to_current: dict[str, str],
+) -> Any:
+    """Normalize a single struct value to match the current schema."""
+    if val is None or not isinstance(val, dict):
+        return val
+    result = {}
+    for field_name in expected_names:
+        if field_name in val:
+            result[field_name] = val[field_name]
+        else:
+            # Check old names
+            found = False
+            for old_name, current_name in old_to_current.items():
+                if current_name == field_name and old_name in val:
+                    result[field_name] = val[old_name]
+                    found = True
+                    break
+            if not found:
+                result[field_name] = None
+    return result
+
+
+def _normalize_struct_columns(
+    df: pd.DataFrame,
+    all_columns: list[ColumnInfo],
+    history: list[ColumnHistoryEntry],
+) -> pd.DataFrame:
+    """Normalize struct columns to match the current schema.
+
+    Handles struct field additions (fill None), drops (remove), and renames.
+    """
+    struct_info = _get_struct_field_info(all_columns, history)
+
+    for col_name, (expected_names, old_to_current) in struct_info.items():
+        if col_name not in df.columns:
+            continue
+        # Check if any value needs normalization
+        sample = df[col_name].dropna().head(1)
+        if sample.empty:
+            continue
+        sample_val = sample.iloc[0]
+        if not isinstance(sample_val, dict):
+            continue
+        sample_keys = set(sample_val.keys())
+        expected_set = set(expected_names)
+        if sample_keys == expected_set:
+            continue
+        # Normalize
+        df[col_name] = df[col_name].apply(
+            lambda v, en=expected_names, otc=old_to_current: _normalize_struct_value(v, en, otc)
+        )
+
+    return df
+
+
 def _group_files_by_rename_map(
     files: list[FileInfo],
     history: list[ColumnHistoryEntry],
@@ -320,6 +439,9 @@ class DuckLakeDataset:
                 result = frames[0]
             else:
                 result = pd.concat(frames, ignore_index=True)
+
+            # Normalize struct columns (handle field add/drop/rename)
+            result = _normalize_struct_columns(result, all_columns, history)
 
             # Add inlined data if present
             inlined = reader.read_inlined_data(
