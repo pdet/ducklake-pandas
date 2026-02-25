@@ -9,6 +9,87 @@ import numpy as np
 import pandas as pd
 
 
+# SQL standard / DuckDB display name → DuckLake internal type name
+# (lowercase names as stored in ducklake_column.column_type)
+_SQL_TO_INTERNAL: dict[str, str] = {
+    "BOOLEAN": "boolean",
+    "BOOL": "boolean",
+    "TINYINT": "int8",
+    "SMALLINT": "int16",
+    "INTEGER": "int32",
+    "INT": "int32",
+    "BIGINT": "int64",
+    "HUGEINT": "int128",
+    "UTINYINT": "uint8",
+    "USMALLINT": "uint16",
+    "UINTEGER": "uint32",
+    "UINT": "uint32",
+    "UBIGINT": "uint64",
+    "UHUGEINT": "uint128",
+    "FLOAT": "float32",
+    "REAL": "float32",
+    "DOUBLE": "float64",
+    "VARCHAR": "varchar",
+    "TEXT": "varchar",
+    "STRING": "varchar",
+    "BLOB": "blob",
+    "BYTEA": "blob",
+    "DATE": "date",
+    "TIME": "time",
+    "TIMESTAMP": "timestamp",
+    "TIMESTAMP_S": "timestamp_s",
+    "TIMESTAMP_MS": "timestamp_ms",
+    "TIMESTAMP_NS": "timestamp_ns",
+    "TIMESTAMP_US": "timestamp",
+    "TIMESTAMP WITH TIME ZONE": "timestamptz",
+    "TIMESTAMPTZ": "timestamptz",
+    "TIMESTAMP_TZ": "timestamptz",
+    "INTERVAL": "interval",
+    "UUID": "uuid",
+    "JSON": "json",
+    "BIT": "bit",
+    "TIME_NS": "time_ns",
+    "TIMETZ": "timetz",
+    "TIME_TZ": "timetz",
+    "TIME WITH TIME ZONE": "timetz",
+    "GEOMETRY": "geometry",
+    "VARIANT": "variant",
+    "UNKNOWN": "unknown",
+}
+
+
+def normalize_type_to_ducklake(type_str: str) -> str:
+    """Normalize a user-supplied DuckDB type string to DuckLake internal format.
+
+    Maps SQL standard names (e.g. ``"DOUBLE"``, ``"INTEGER"``) to the lowercase
+    internal names that DuckDB's DuckLake extension expects (``"float64"``,
+    ``"int32"``).  Already-internal names are returned as-is.
+    """
+    t = type_str.strip()
+    upper = t.upper()
+
+    # Direct match (SQL standard or display name)
+    if upper in _SQL_TO_INTERNAL:
+        return _SQL_TO_INTERNAL[upper]
+
+    # Already a lowercase internal name
+    lower = t.lower()
+    if lower in {v for v in _SQL_TO_INTERNAL.values()}:
+        return lower
+
+    # DECIMAL / NUMERIC with precision
+    m = re.match(r"(?:DECIMAL|NUMERIC)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)", upper)
+    if m:
+        return f"decimal({m.group(1)},{m.group(2)})"
+
+    # VARCHAR(N) → varchar
+    if upper.startswith("VARCHAR") or upper.startswith("TEXT"):
+        return "varchar"
+
+    # Compound types: LIST, STRUCT, MAP — return lowercase
+    return lower
+
+
 # DuckDB type string → pandas/numpy dtype string
 _SIMPLE_TYPE_MAP: dict[str, str] = {
     # SQL standard names (uppercase)

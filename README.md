@@ -2,9 +2,9 @@
 
 > **This project is a proof of concept. It was 100% written by [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview) (Anthropic's AI coding agent). It is not intended for production use.**
 
-A pure-Python [Pandas](https://pola.rs/) integration for [DuckLake](https://ducklake.select/) catalogs — both read and write.
+A pure-Python [Pandas](https://pandas.pydata.org/) integration for [DuckLake](https://ducklake.select/) catalogs — both read and write.
 
-Reads and writes DuckLake metadata directly from SQLite or PostgreSQL and scans the underlying Parquet data files through Pandas' native Parquet reader. **No DuckDB runtime dependency.** You get lazy evaluation, predicate pushdown, projection pushdown, file pruning, and all other Pandas optimizations out of the box.
+Reads and writes DuckLake metadata directly from SQLite or PostgreSQL and scans the underlying Parquet data files through Pandas' native Parquet reader. **No DuckDB runtime dependency.**
 
 ## Installation
 
@@ -15,22 +15,20 @@ pip install ducklake-pandas
 pip install ducklake-pandas[postgres]
 ```
 
-The only runtime dependency is `pandas >= 1.0`. SQLite catalogs use Python's built-in `sqlite3`. PostgreSQL catalogs require the `postgres` extra (adds `psycopg2`).
+Runtime dependencies: `pandas >= 2.0` and `pyarrow >= 12.0`. SQLite catalogs use Python's built-in `sqlite3`. PostgreSQL catalogs require the `postgres` extra (adds `psycopg2`).
 
 ## Quick start
 
 ### Reading data
 
 ```python
-import pandas as pd
-from ducklake_pandas import read_ducklake, read_ducklake
+from ducklake_pandas import read_ducklake
 
-# Eager read
+# Read a table into a DataFrame
 df = read_ducklake("catalog.ducklake", "my_table")
 
-# Lazy scan (recommended for large tables)
-lf = read_ducklake("catalog.ducklake", "my_table")
-result = lf.filter(pd.col("x") > 100).select("x", "y").collect()
+# Select specific columns
+df = read_ducklake("catalog.ducklake", "my_table", columns=["x", "y"])
 
 # Time travel
 df = read_ducklake("catalog.ducklake", "my_table", snapshot_version=3)
@@ -43,6 +41,7 @@ df = read_ducklake("postgresql://user:pass@localhost/mydb", "my_table")
 ### Writing data
 
 ```python
+import pandas as pd
 from ducklake_pandas import write_ducklake
 
 df = pd.DataFrame({"id": [1, 2, 3], "name": ["Alice", "Bob", "Carol"]})
@@ -78,13 +77,13 @@ from ducklake_pandas import (
 create_ducklake_schema("catalog.ducklake", "analytics")
 drop_ducklake_schema("catalog.ducklake", "analytics", cascade=True)
 
-# Table management
-create_ducklake_table("catalog.ducklake", "events", {"ts": pd.Datetime("us"), "value": pd.Float64})
+# Table management — schema_dict uses DuckDB type strings
+create_ducklake_table("catalog.ducklake", "events", {"ts": "timestamp", "value": "double"})
 rename_ducklake_table("catalog.ducklake", "events", "event_log")
 drop_ducklake_table("catalog.ducklake", "event_log")
 
-# Column management
-alter_ducklake_add_column("catalog.ducklake", "users", "email", pd.String)
+# Column management — dtype is a DuckDB type string
+alter_ducklake_add_column("catalog.ducklake", "users", "email", "varchar")
 alter_ducklake_rename_column("catalog.ducklake", "users", "email", "contact_email")
 alter_ducklake_drop_column("catalog.ducklake", "users", "contact_email")
 
@@ -101,14 +100,14 @@ drop_ducklake_view("catalog.ducklake", "active_users")
 ```python
 from ducklake_pandas import delete_ducklake, update_ducklake, merge_ducklake
 
-# Delete rows matching a predicate
-deleted = delete_ducklake("catalog.ducklake", "users", pd.col("active") == False)
+# Delete rows matching a predicate (callable: DataFrame -> Series[bool])
+deleted = delete_ducklake("catalog.ducklake", "users", lambda df: df["active"] == False)
 
 # Update rows
 updated = update_ducklake(
     "catalog.ducklake", "users",
     updates={"status": "inactive"},
-    predicate=pd.col("last_login") < "2024-01-01",
+    predicate=lambda df: df["last_login"] < "2024-01-01",
 )
 
 # Merge (upsert)
@@ -156,11 +155,11 @@ deleted = vacuum_ducklake("catalog.ducklake")
 ## Features
 
 ### Read path
-- **Lazy and eager reads** via `read_ducklake()` / `read_ducklake()`
-- **Predicate and projection pushdown** through Pandas' native optimizer
+- **Eager reads** via `read_ducklake()`
+- **Column projection** via the `columns` parameter
 - **File pruning** via column-level min/max statistics and partition values
 - **Time travel** by snapshot version or timestamp
-- **Delete file handling** via Pandas' Iceberg-compatible positional deletes
+- **Delete file handling** via Iceberg-compatible positional deletes
 - **Schema evolution** — ADD COLUMN, DROP COLUMN, RENAME COLUMN all handled transparently
 - **Inlined data** — small tables stored directly in catalog metadata
 - **Partition pruning** for identity-transform partitions
@@ -212,7 +211,7 @@ ducklake-pandas produces catalogs that are fully interoperable with DuckDB's Duc
 # Create catalog with DuckDB
 import duckdb
 con = duckdb.connect()
-con.execute("INSTALL ducklake; LOAD ducklake; INSTALL sqlite_scanner; LOAD sqlite_scanner")
+con.execute("INSTALL ducklake; LOAD ducklake")
 con.execute("ATTACH 'ducklake:sqlite:catalog.ducklake' AS lake (DATA_PATH 'data/')")
 con.execute("CREATE TABLE lake.users (id INTEGER, name VARCHAR)")
 con.execute("INSERT INTO lake.users VALUES (1, 'Alice'), (2, 'Bob')")
@@ -239,27 +238,24 @@ See the [DuckDB Interop Guide](https://github.com/pdet/ducklake-pandas/wiki/Duck
 | `UBIGINT` / `uint64` | `UInt64` | |
 | `FLOAT` / `float32` | `Float32` | |
 | `DOUBLE` / `float64` | `Float64` | |
-| `BOOLEAN` | `Boolean` | |
-| `VARCHAR` | `String` | |
-| `BLOB` | `Binary` | |
-| `DATE` | `Date` | |
-| `TIME` / `time_ns` / `timetz` | `Time` | |
-| `TIMESTAMP` / `timestamp_us` | `Datetime("us")` | |
-| `TIMESTAMP_MS` | `Datetime("ms")` | |
-| `TIMESTAMP_NS` | `Datetime("ns")` | |
-| `TIMESTAMP_S` | `Datetime("us")` | DuckDB writes as microseconds in Parquet |
-| `TIMESTAMPTZ` | `Datetime("us", "UTC")` | |
-| `DECIMAL(p, s)` | `Decimal(p, s)` | |
-| `UUID` | `Binary` | 16-byte binary in Parquet |
-| `JSON` | `Binary` | Cast to `String` for text access |
-| `HUGEINT` | `Int128` | Limited: DuckDB writes as Float64 in Parquet |
-| `UHUGEINT` | `UInt128` | Limited: DuckDB writes as Float64 in Parquet |
-| `INTERVAL` | `Duration("us")` | Limited: Pandas Parquet reader limitation |
-| `LIST(T)` | `List(T)` | Recursive nesting supported |
-| `STRUCT(...)` | `Struct(...)` | Recursive nesting supported |
-| `MAP(K, V)` | `List(Struct(key, value))` | Limited: Pandas Parquet reader issue |
-| `GEOMETRY` | `Binary` | |
-| `VARIANT` | `String` | |
+| `BOOLEAN` | `bool` | |
+| `VARCHAR` | `object` (str) | |
+| `BLOB` | `object` (bytes) | |
+| `DATE` | `object` (date) | |
+| `TIME` / `timetz` | `object` (time) | |
+| `TIMESTAMP` | `datetime64[us]` | |
+| `TIMESTAMP_MS` | `datetime64[ms]` | |
+| `TIMESTAMP_NS` | `datetime64[ns]` | |
+| `TIMESTAMP_S` | `datetime64[s]` | |
+| `TIMESTAMPTZ` | `datetime64[us]` | |
+| `DECIMAL(p, s)` | `object` (Decimal) | |
+| `UUID` | `object` | Binary in Parquet |
+| `JSON` | `object` | Binary in Parquet |
+| `HUGEINT` | `Int64` | Limited: DuckDB writes as Float64 in Parquet |
+| `INTERVAL` | `object` | Limited: Pandas Parquet reader limitation |
+| `LIST(T)` | `object` (list) | Recursive nesting supported |
+| `STRUCT(...)` | `object` (dict) | Recursive nesting supported |
+| `MAP(K, V)` | `object` (list of dicts) | Limited: Pandas Parquet reader issue |
 
 ## Architecture
 
@@ -269,7 +265,7 @@ src/ducklake_pandas/
     _backend.py       Backend adapters (SQLite, PostgreSQL)
     _catalog.py       Metadata reader (snapshots, tables, columns, files, stats)
     _catalog_api.py   DuckLakeCatalog inspection class
-    _dataset.py       Pandas PythonDatasetProvider implementation
+    _dataset.py       Pandas dataset reader
     _schema.py        DuckLake type -> Pandas type mapping
     _stats.py         Column statistics for file pruning
     _writer.py        Catalog writer (tables, data, DDL, views, maintenance)
@@ -296,7 +292,7 @@ pytest -k "test_views"    # Specific pattern
 DUCKLAKE_PG_DSN="postgresql://user:pass@localhost/testdb" pytest
 ```
 
-Test suite: **590 tests** (5 xfailed for known DuckDB/Pandas limitations). Tests are parametrized over backends — SQLite always runs; PostgreSQL runs when `DUCKLAKE_PG_DSN` is set.
+Test suite: **553 tests** (4 xfailed for known DuckDB/Pandas limitations). Tests are parametrized over backends — SQLite always runs; PostgreSQL runs when `DUCKLAKE_PG_DSN` is set.
 
 ## Documentation
 

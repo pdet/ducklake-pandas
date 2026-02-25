@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from ducklake_pandas._backend import PostgreSQLBackend, SQLiteBackend, create_backend
-from ducklake_pandas._schema import pandas_dtype_to_duckdb, duckdb_type_to_pandas
+from ducklake_pandas._schema import pandas_dtype_to_duckdb, duckdb_type_to_pandas, normalize_type_to_ducklake
 
 # Type alias for predicates: a callable that takes a DataFrame and returns a boolean Series
 Predicate = Callable[[pd.DataFrame], "pd.Series[bool]"]
@@ -568,7 +568,7 @@ class DuckLakeCatalogWriter:
                     column_id=this_id,
                     column_order=order,
                     column_name=name,
-                    column_type=dtype_str,
+                    column_type=normalize_type_to_ducklake(dtype_str),
                     parent_column=parent_column,
                     nulls_allowed=True,
                 )
@@ -2503,7 +2503,7 @@ class DuckLakeCatalogWriter:
             "VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL)",
             [
                 new_col_id, new_snap, table_id, new_col_order,
-                column_name, dtype, default_str, default_str, True,
+                column_name, normalize_type_to_ducklake(dtype), default_str, default_str, True,
             ],
         )
 
