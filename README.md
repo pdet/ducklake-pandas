@@ -1,5 +1,8 @@
 # ducklake-pandas
 
+> **Check the [ducklake-dataframe]([https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview](https://github.com/pdet/ducklake-dataframe)) project instead.**
+
+
 > **This project is a proof of concept. It was 100% written by [Claude Code](https://docs.anthropic.com/en/docs/build-with-claude/claude-code/overview) (Anthropic's AI coding agent). It is not intended for production use.**
 
 A pure-Python [Pandas](https://pandas.pydata.org/) integration for [DuckLake](https://ducklake.select/) catalogs — both read and write.
